@@ -43,17 +43,17 @@ if len(new_posts) != 0:
 texts, images = [], []
 for post in new_posts:
     texts.append(post['text'])
-    images.append([InputMediaPhoto(at['photo']['sizes'][-1]['url']) for at in post['attachments']])
+    images.append([InputMediaPhoto(at['photo']['sizes'][-1]['url'], caption=post['text']) for at in post['attachments']])
 
 # Send the posts to the telegram
 for text, imgs in zip(texts, images):
     if 1 == len(imgs):
-        tg.send_photo(chat_id=chat_id, media=imgs[0])
+        tg.send_photo(chat_id=chat_id, media=imgs[0], caption=text)
     if 2 <= len(imgs) <= 10:
-        tg.send_media_group(chat_id=chat_id, media=imgs)
+        tg.send_media_group(chat_id=chat_id, media=imgs, caption=text)
     if 10 < len(imgs):
-        tg.send_media_group(chat_id=chat_id, media=imgs[:10])
+        tg.send_media_group(chat_id=chat_id, media=imgs[:10], caption=text)
 
-
+# Update timestamp
 with open('timestamp', 'w') as f:
     f.write(str(last_timestamp))
