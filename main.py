@@ -1,7 +1,6 @@
 import telegram
 from telegram import InputMediaPhoto
 import  vk_api
-import json
 import time
 
 def two_factor():
@@ -37,13 +36,18 @@ response = vk_tools.get_all('wall.get', 1, values=values, limit=1)
 # Get the new posts
 new_posts = [p for p in response['items'][1:] if p['date'] > last_timestamp]
 if len(new_posts) != 0:
-    last_timestamp = max([p['date'] for p in new_posts])
+    last_timestamp = max([p['date'] for p in new_posts]) + 1
 
 # Get the texts and images from the posts
 texts, images = [], []
 for post in new_posts:
     texts.append(post['text'])
-    images.append([InputMediaPhoto(at['photo']['sizes'][-1]['url'], caption=post['text']) for at in post['attachments']])
+
+    # Take only images
+    try:
+        images.append([InputMediaPhoto(at['photo']['sizes'][-1]['url'], caption=post['text']) for at in post['attachments']])
+    except:
+        pass
 
 # Send the posts to the telegram
 for text, imgs in zip(texts, images):
