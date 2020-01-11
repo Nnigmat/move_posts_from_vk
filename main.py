@@ -2,41 +2,39 @@ import telegram
 from telegram import InputMediaPhoto
 import  vk_api
 import time
+import requests
 
-def two_factor():
-    code = input('Code?')
-    return code, True
+CHAT_ID = '@testchannel_darov'
 
-chat_id = '@testchannel_darov'
-token = open('token').read().strip()
-login, password = open('vk').read().strip().split(' ')
+def read_tokens(path='token'):
+    return [token.strip() for token in open(path).readlines()]
 
-try:
-    last_timestamp = int(open('timestamp').read().strip())
-except:
-    with open('timestamp', 'w') as f:
-        last_timestamp = int(time.time())
-        f.write(str(last_timestamp))
+def read_timestamp(path='timestamp'):
+    try:
+        timestamp = int(open('timestamp').read().strip())
+    except:
+        with open('timestamp', 'w') as f:
+            timestamp = int(time.time())
+            f.write(str(last_timestamp))
+    return timestamp
+
+def wall_request(token=None, domain='yememirukusuri'):
+    response = requests.get(f'https://api.vk.com/method/wall.get?domain={domain}&access_token={vk_token}&v=5.103&owner_id=-27943506').json()['response']
+    return response
+
+tg_token, vk_token = read_tokens()
+timestamp = read_timestamp()
 
 # Create telegram bot
-tg = telegram.Bot(token=token)
-
-# Authenticate and get api
-vk_session = vk_api.VkApi(login, password, auth_handler=two_factor)
-vk_sessoin = vk_session.auth()
-vk = vk_session.get_api()
-
-# Create vk tools for posts collecting
-vk_tools = vk_api.tools.VkTools(vk)
+tg = telegram.Bot(token=tg_token)
 
 # Get the posts (Count after multiplies on 25. E.g. count = 1 => 25 posts)
-values = {'domain': 'yumemirukusuri', 'count': 1, 'filter': 'owner'}
-response = vk_tools.get_all('wall.get', 1, values=values, limit=1)
+response = wall_request(vk_token)
 
 # Get the new posts
-new_posts = [p for p in response['items'][1:] if p['date'] > last_timestamp]
+new_posts = [p for p in response['items'][1:] if p['date'] > timestamp]
 if len(new_posts) != 0:
-    last_timestamp = max([p['date'] for p in new_posts]) + 1
+    timestamp = max([p['date'] for p in new_posts]) + 1
 
 # Get the texts and images from the posts
 texts, images = [], []
@@ -52,12 +50,19 @@ for post in new_posts:
 # Send the posts to the telegram
 for text, imgs in zip(texts, images):
     if 1 == len(imgs):
-        tg.send_photo(chat_id=chat_id, media=imgs[0], caption=text)
+        media = imgs[0]
     if 2 <= len(imgs) <= 10:
-        tg.send_media_group(chat_id=chat_id, media=imgs, caption=text)
+        media = imgs
     if 10 < len(imgs):
-        tg.send_media_group(chat_id=chat_id, media=imgs[:10], caption=text)
+        media = imgs[:10]
+
+    while True:
+        try:
+            tg.send_media_group(chat_id=CHAT_ID, media=imgs[:10], caption=text)
+            break
+        except:
+            pass
 
 # Update timestamp
 with open('timestamp', 'w') as f:
-    f.write(str(last_timestamp))
+    f.write(str(timestamp))
